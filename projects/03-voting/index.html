@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <title>Voting DApp</title>
+        <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet" />
+        <link rel="stylesheet" href="../shared/style.css" />
+    </head>
+    <body>
+        <main>
+            <div class="card">
+                <h1>③ Voting DApp</h1>
+                <p>Transparent voting — 1 wallet = 1 vote, anyone can verify the result</p>
+            </div>
+
+            <div class="card">
+                <button id="connectBtn">Connect MetaMask</button>
+                <p class="mono" id="account" style="margin-top: 10px">Not connected</p>
+            </div>
+
+            <div class="card locked" id="app">
+                <h2>Candidates</h2>
+                <p id="voteState" style="margin-bottom: 12px"></p>
+                <ul class="list" id="candidates"></ul>
+                <p class="status" id="status"></p>
+            </div>
+        </main>
+
+        <script type="module">
+            import { connect, sendTx, short, errMsg } from '../shared/labchain.js';
+
+            const CONTRACT_ADDRESS = '0xYOUR_VOTING_ADDRESS'; // ← from Remix
+
+            const ABI = [
+                'function vote(uint256 candidateId)',
+                'function hasVoted(address) view returns (bool)',
+                'function getCandidates() view returns (tuple(string name, uint256 voteCount)[])',
+                'event Voted(address indexed voter, uint256 indexed candidateId)',
+            ];
+
+            const $ = (id) => document.getElementById(id);
+            let contract, account;
+
+            async function render() {
+                const [candidates, voted] = await Promise.all([contract.getCandidates(), contract.hasVoted(account)]);
+                const total = candidates.reduce((sum, c) => sum + Number(c.voteCount), 0);
+                $('voteState').textContent = voted ? '✔ You have voted' : 'Pick 1 candidate (you can vote once)';
+
+                const list = $('candidates');
+                list.replaceChildren();
+                candidates.forEach((c, id) => {
+                    const votes = Number(c.voteCount);
+                    const pct = total ? Math.round((votes / total) * 100) : 0;
+                    const li = document.createElement('li');
+                    const row = document.createElement('div');
+                    row.className = 'row';
+                    row.style.justifyContent = 'space-between';
+                    const name = document.createElement('strong');
+                    name.textContent = `${c.name} — ${votes} votes (${pct}%)`;
+                    const btn = document.createElement('button');
+                    btn.textContent = 'Vote';
+                    btn.disabled = voted;
+                    btn.onclick = async () => {
+                        if (await sendTx($('status'), () => contract.vote(id))) await render();
+                    };
+                    row.append(name, btn);
+                    const bar = document.createElement('div');
+                    bar.className = 'bar';
+                    bar.innerHTML = `<span style="width:${pct}%"></span>`;
+                    li.append(row, bar);
+                    list.append(li);
+                });
+            }
+
+            $('connectBtn').onclick = async () => {
+                try {
+                    const c = await connect(CONTRACT_ADDRESS, ABI);
+                    contract = c.contract;
+                    account = c.account;
+                    $('account').textContent = 'Connected: ' + short(account);
+                    $('app').classList.remove('locked');
+                    await render();
+                    contract.on('Voted', render); // Live results
+                } catch (err) {
+                    $('account').textContent = 'Error: ' + errMsg(err);
+                }
+            };
+        </script>
+    </body>
+</html>

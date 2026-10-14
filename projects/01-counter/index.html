@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <title>Counter DApp</title>
+        <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet" />
+        <link rel="stylesheet" href="../shared/style.css" />
+    </head>
+    <body>
+        <main>
+            <div class="card">
+                <h1>① Counter DApp</h1>
+                <p>A counter the whole class clicks together — every click = 1 transaction on LAB Chain</p>
+            </div>
+
+            <div class="card">
+                <button id="connectBtn">Connect MetaMask</button>
+                <p class="mono" id="account" style="margin-top: 10px">Not connected</p>
+            </div>
+
+            <div class="card locked" id="app">
+                <h2>count()</h2>
+                <div class="big" id="count">—</div>
+                <div class="row" style="margin-top: 14px">
+                    <button id="incBtn">+1 increment</button>
+                    <button id="decBtn" class="ghost">−1 decrement</button>
+                </div>
+                <p class="status" id="status"></p>
+            </div>
+        </main>
+
+        <script type="module">
+            import { connect, sendTx, short, errMsg } from '../shared/labchain.js';
+
+            const CONTRACT_ADDRESS = '0xYOUR_COUNTER_ADDRESS'; // ← from Remix
+
+            const ABI = [
+                'function count() view returns (uint256)',
+                'function increment()',
+                'function decrement()',
+                'event CountChanged(address indexed by, uint256 newCount)',
+            ];
+
+            const $ = (id) => document.getElementById(id);
+            let contract;
+
+            async function refresh() {
+                $('count').textContent = (await contract.count()).toString();
+            }
+
+            $('connectBtn').onclick = async () => {
+                try {
+                    const c = await connect(CONTRACT_ADDRESS, ABI);
+                    contract = c.contract;
+                    $('account').textContent = 'Connected: ' + short(c.account);
+                    $('app').classList.remove('locked');
+                    await refresh();
+                    // A classmate clicks → our screen updates by itself
+                    contract.on('CountChanged', refresh);
+                } catch (err) {
+                    $('account').textContent = 'Error: ' + errMsg(err);
+                }
+            };
+
+            $('incBtn').onclick = async () => {
+                if (await sendTx($('status'), () => contract.increment())) await refresh();
+            };
+
+            // If count = 0 → require in the contract reverts with "Counter: already zero"
+            $('decBtn').onclick = async () => {
+                if (await sendTx($('status'), () => contract.decrement())) await refresh();
+            };
+        </script>
+    </body>
+</html>

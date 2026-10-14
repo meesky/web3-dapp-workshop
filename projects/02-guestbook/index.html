@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <title>Guestbook DApp</title>
+        <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet" />
+        <link rel="stylesheet" href="../shared/style.css" />
+    </head>
+    <body>
+        <main>
+            <div class="card">
+                <h1>② Guestbook DApp</h1>
+                <p>A guestbook on the blockchain — once written it is permanent and cannot be deleted</p>
+            </div>
+
+            <div class="card">
+                <button id="connectBtn">Connect MetaMask</button>
+                <p class="mono" id="account" style="margin-top: 10px">Not connected</p>
+            </div>
+
+            <div class="card locked" id="app">
+                <h2>Sign — sign(message)</h2>
+                <textarea
+                    id="msgInput"
+                    rows="3"
+                    maxlength="100"
+                    placeholder="Write a message to your classmates..."
+                ></textarea>
+                <button id="signBtn">Sign</button>
+                <p class="status" id="status"></p>
+            </div>
+
+            <div class="card">
+                <h2>All messages (<span id="total">0</span>)</h2>
+                <ul class="list" id="entries"></ul>
+            </div>
+        </main>
+
+        <script type="module">
+            import { connect, sendTx, short, fmtTime, errMsg } from '../shared/labchain.js';
+
+            const CONTRACT_ADDRESS = '0xYOUR_GUESTBOOK_ADDRESS'; // ← from Remix
+
+            // A function returning struct[] → write it as tuple(...)[]
+            const ABI = [
+                'function sign(string message)',
+                'function getEntries() view returns (tuple(address author, string message, uint256 timestamp)[])',
+                'event NewEntry(address indexed author, string message, uint256 timestamp)',
+            ];
+
+            const $ = (id) => document.getElementById(id);
+            let contract;
+
+            async function loadEntries() {
+                const entries = await contract.getEntries();
+                $('total').textContent = entries.length;
+                const list = $('entries');
+                list.replaceChildren();
+                // Newest first
+                [...entries].reverse().forEach((e) => {
+                    const li = document.createElement('li');
+                    const text = document.createElement('div');
+                    // ⚠️ Use textContent, not innerHTML: anyone can write on-chain data (prevents XSS)
+                    text.textContent = e.message;
+                    const meta = document.createElement('div');
+                    meta.className = 'meta';
+                    meta.textContent = `${short(e.author)} · ${fmtTime(e.timestamp)}`;
+                    li.append(text, meta);
+                    list.append(li);
+                });
+            }
+
+            $('connectBtn').onclick = async () => {
+                try {
+                    const c = await connect(CONTRACT_ADDRESS, ABI);
+                    contract = c.contract;
+                    $('account').textContent = 'Connected: ' + short(c.account);
+                    $('app').classList.remove('locked');
+                    await loadEntries();
+                    contract.on('NewEntry', loadEntries); // A classmate writes → we see it immediately
+                } catch (err) {
+                    $('account').textContent = 'Error: ' + errMsg(err);
+                }
+            };
+
+            $('signBtn').onclick = async () => {
+                const msg = $('msgInput').value.trim();
+                if (!msg) return;
+                if (await sendTx($('status'), () => contract.sign(msg))) {
+                    $('msgInput').value = '';
+                    await loadEntries();
+                }
+            };
+        </script>
+    </body>
+</html>

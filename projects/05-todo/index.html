@@ -1,0 +1,107 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <title>Todo List DApp</title>
+        <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet" />
+        <link rel="stylesheet" href="../shared/style.css" />
+    </head>
+    <body>
+        <main>
+            <div class="card">
+                <h1>⑤ Todo List DApp</h1>
+                <p>Each wallet has its own list — switch accounts in MetaMask to see a different list</p>
+            </div>
+
+            <div class="card">
+                <button id="connectBtn">Connect MetaMask</button>
+                <p class="mono" id="account" style="margin-top: 10px">Not connected</p>
+            </div>
+
+            <div class="card locked" id="app">
+                <h2>Add a task — addTask(text)</h2>
+                <div class="row">
+                    <input
+                        id="taskInput"
+                        maxlength="80"
+                        placeholder="e.g. Read the Solidity docs"
+                        style="flex: 1; margin: 0"
+                    />
+                    <button id="addBtn">Add</button>
+                </div>
+                <p class="status" id="status"></p>
+
+                <h2 style="margin-top: 18px">My tasks — getMyTasks()</h2>
+                <ul class="list" id="tasks"></ul>
+            </div>
+        </main>
+
+        <script type="module">
+            import { connect, sendTx, short, errMsg } from '../shared/labchain.js';
+
+            const CONTRACT_ADDRESS = '0xYOUR_TODOLIST_ADDRESS'; // ← from Remix
+
+            const ABI = [
+                'function addTask(string text)',
+                'function toggleTask(uint256 id)',
+                'function getMyTasks() view returns (tuple(string text, bool done)[])',
+            ];
+
+            const $ = (id) => document.getElementById(id);
+            let contract;
+
+            async function loadTasks() {
+                // The contract is connected to a signer → msg.sender in the view = our address
+                const tasks = await contract.getMyTasks();
+                const list = $('tasks');
+                list.replaceChildren();
+                if (tasks.length === 0) {
+                    const li = document.createElement('li');
+                    li.textContent = 'No tasks yet 🎉';
+                    list.append(li);
+                }
+                tasks.forEach((t, id) => {
+                    const li = document.createElement('li');
+                    li.className = 'row';
+                    const box = document.createElement('input');
+                    box.type = 'checkbox';
+                    box.checked = t.done;
+                    box.style.width = 'auto';
+                    box.style.margin = '0';
+                    box.onchange = async () => {
+                        box.disabled = true;
+                        await sendTx($('status'), () => contract.toggleTask(id));
+                        await loadTasks();
+                    };
+                    const label = document.createElement('span');
+                    label.textContent = t.text;
+                    if (t.done) label.style.textDecoration = 'line-through';
+                    li.append(box, label);
+                    list.append(li);
+                });
+            }
+
+            $('connectBtn').onclick = async () => {
+                try {
+                    const c = await connect(CONTRACT_ADDRESS, ABI);
+                    contract = c.contract;
+                    $('account').textContent = 'Connected: ' + short(c.account);
+                    $('app').classList.remove('locked');
+                    await loadTasks();
+                } catch (err) {
+                    $('account').textContent = 'Error: ' + errMsg(err);
+                }
+            };
+
+            $('addBtn').onclick = async () => {
+                const text = $('taskInput').value.trim();
+                if (!text) return;
+                if (await sendTx($('status'), () => contract.addTask(text))) {
+                    $('taskInput').value = '';
+                    await loadTasks();
+                }
+            };
+        </script>
+    </body>
+</html>

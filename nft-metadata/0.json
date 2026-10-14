@@ -1,0 +1,10 @@
+{
+    "name": "Workshop NFT #0",
+    "description": "My first NFT from the Web3 Workshop on LAB Chain",
+    "image": "ipfs://REPLACE_WITH_IMAGE_CID",
+    "attributes": [
+        { "trait_type": "Event", "value": "Web3 Workshop Laos" },
+        { "trait_type": "Network", "value": "LAB Chain" },
+        { "trait_type": "Level", "value": 1 }
+    ]
+}

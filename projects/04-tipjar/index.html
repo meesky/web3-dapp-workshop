@@ -1,0 +1,115 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <title>Tip Jar DApp</title>
+        <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet" />
+        <link rel="stylesheet" href="../shared/style.css" />
+    </head>
+    <body>
+        <main>
+            <div class="card">
+                <h1>④ Tip Jar DApp</h1>
+                <p>
+                    A tip jar — send LAB with a message, the money goes into the contract, only the owner can withdraw
+                </p>
+            </div>
+
+            <div class="card">
+                <button id="connectBtn">Connect MetaMask</button>
+                <p class="mono" id="account" style="margin-top: 10px">Not connected</p>
+            </div>
+
+            <div class="card locked" id="app">
+                <h2>Jar balance</h2>
+                <div class="big"><span id="balance">—</span> <small style="font-size: 1rem">LAB</small></div>
+                <p class="meta" id="owner"></p>
+
+                <h2 style="margin-top: 18px">Send a tip — tip(message) payable</h2>
+                <input id="amountInput" type="number" min="0" step="0.001" value="0.001" />
+                <input id="msgInput" maxlength="80" placeholder="Message, e.g. Thanks, teacher!" />
+                <div class="row">
+                    <button id="tipBtn">Send tip</button>
+                    <button id="withdrawBtn" class="ghost" hidden>Withdraw (owner)</button>
+                </div>
+                <p class="status" id="status"></p>
+            </div>
+
+            <div class="card">
+                <h2>Tip history</h2>
+                <ul class="list" id="tips"></ul>
+            </div>
+        </main>
+
+        <script type="module">
+            import { ethers, connect, sendTx, short, fmtTime, errMsg } from '../shared/labchain.js';
+
+            const CONTRACT_ADDRESS = '0xYOUR_TIPJAR_ADDRESS'; // ← from Remix
+
+            const ABI = [
+                'function owner() view returns (address)',
+                'function tip(string message) payable',
+                'function withdraw()',
+                'function totalBalance() view returns (uint256)',
+                'function getTips() view returns (tuple(address from, uint256 amount, string message, uint256 timestamp)[])',
+                'event NewTip(address indexed from, uint256 amount, string message)',
+            ];
+
+            const $ = (id) => document.getElementById(id);
+            let contract;
+
+            async function refresh() {
+                const [bal, tips] = await Promise.all([contract.totalBalance(), contract.getTips()]);
+                // formatEther: wei (10^18) → human-readable LAB
+                $('balance').textContent = ethers.formatEther(bal);
+                const list = $('tips');
+                list.replaceChildren();
+                [...tips].reverse().forEach((t) => {
+                    const li = document.createElement('li');
+                    const text = document.createElement('div');
+                    text.textContent = `${ethers.formatEther(t.amount)} LAB — ${t.message || '(no message)'}`;
+                    const meta = document.createElement('div');
+                    meta.className = 'meta';
+                    meta.textContent = `${short(t.from)} · ${fmtTime(t.timestamp)}`;
+                    li.append(text, meta);
+                    list.append(li);
+                });
+            }
+
+            $('connectBtn').onclick = async () => {
+                try {
+                    const c = await connect(CONTRACT_ADDRESS, ABI);
+                    contract = c.contract;
+                    $('account').textContent = 'Connected: ' + short(c.account);
+                    const owner = await contract.owner();
+                    $('owner').textContent = 'Owner: ' + owner;
+                    // Show the withdraw button to the owner only (the contract checks again with onlyOwner)
+                    $('withdrawBtn').hidden = owner.toLowerCase() !== c.account.toLowerCase();
+                    $('app').classList.remove('locked');
+                    await refresh();
+                    contract.on('NewTip', refresh);
+                } catch (err) {
+                    $('account').textContent = 'Error: ' + errMsg(err);
+                }
+            };
+
+            $('tipBtn').onclick = async () => {
+                const amount = $('amountInput').value;
+                if (!amount || Number(amount) <= 0) return;
+                // { value } = LAB attached to the transaction → becomes msg.value in the contract
+                const ok = await sendTx($('status'), () =>
+                    contract.tip($('msgInput').value, { value: ethers.parseEther(amount) }),
+                );
+                if (ok) {
+                    $('msgInput').value = '';
+                    await refresh();
+                }
+            };
+
+            $('withdrawBtn').onclick = async () => {
+                if (await sendTx($('status'), () => contract.withdraw())) await refresh();
+            };
+        </script>
+    </body>
+</html>
