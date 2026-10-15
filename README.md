@@ -53,4 +53,4 @@ workshop/
 └─ projects/            five mini projects, each with its own guide
 ```
 
-The slide decks in [`../docs/`](../docs/) follow the same order, and the project [README](../README.md) covers presenting, PDF export and facilitator preparation.
+The slide decks follow the same order as the labs.

@@ -28,7 +28,7 @@ Every EVM chain is added to MetaMask with the same five values: name, RPC URL, c
 
 ## Steps
 
-1. **Create a new wallet** in MetaMask. Write the 12-word recovery phrase on paper. Do not photograph it, store it in a chat or tell anyone — including the instructor.
+1. **Create a new wallet** in MetaMask. Write the 12-word recovery phrase on paper. Do not photograph it, store it in a chat or tell anyone — not even the instructor or support staff. Only your public address (`0x…`) is ever shared.
 2. Click the **network selector** (top left) → **Add a custom network**.
 3. Enter the five values from the table above → **Save** → switch to **LAB Chain**.
 4. Click your account name to **copy your address** (`0x…`).
@@ -50,10 +50,6 @@ Do not continue to Lab 2 until you have LAB — deploying a contract costs gas.
 | "Chain ID returned by RPC does not match" | Re-enter the RPC URL and chain ID from the table; no trailing spaces or slash |
 | Balance shows 0 | Confirm MetaMask is on LAB Chain (not Ethereum), then check your address with the instructor |
 | Wrong symbol (ETH) | The currency symbol must be `LAB`; edit the network in MetaMask settings |
-
-## For facilitators
-
-LAB Chain has no automatic faucet. Tokens are requested through the form at https://labchain.la/community/request-tokens and reviewed manually (3–5 business days). Request at least a week ahead into one shared wallet, then send about 0.1 LAB to each participant.
 
 ## Shortcut
 

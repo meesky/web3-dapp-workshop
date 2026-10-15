@@ -45,4 +45,4 @@ Five small DApps for extra practice after the main labs, ordered from easy to me
 
 ## Verified
 
-All five contracts were compiled, deployed and tested in Remix VM and on Ganache, including the main `require` failure paths and the two-account cases (voting twice, withdrawing as a non-owner). Their ABIs match the pages. A real-wallet transaction on LAB Chain needs MetaMask and LAB, so rehearse it before the event.
+All five contracts were compiled, deployed and tested in Remix VM and on Ganache, including the main `require` failure paths and the two-account cases (voting twice, withdrawing as a non-owner). Their ABIs match the pages. A real-wallet transaction on LAB Chain needs MetaMask and LAB.

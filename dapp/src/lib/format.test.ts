@@ -15,7 +15,7 @@ describe("isUint", () => {
 
 describe("shortHex", () => {
   it("shortens addresses and hashes", () => {
-    expect(shortHex("0x73194766f78952d95a6060F3A288Aa725De641c6")).toBe("0x7319…41c6");
+    expect(shortHex("0x1111111111111111111111111111111111111111")).toBe("0x1111…1111");
     expect(shortHex("0x1234")).toBe("0x1234");
   });
 });
